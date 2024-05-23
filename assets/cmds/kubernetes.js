@@ -260,6 +260,8 @@ export default {
         "affinity",
         "affinities",
         "probe",
+        "crio",
+        "cri-o",
 
         // Companies,
         "cncf",

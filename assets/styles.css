@@ -44,10 +44,10 @@ a:visited {
 }
 
 textarea#cmd {
-  background: rgba(0, 0, 0, 0.6);
-  color: var(--clh-blue-light);
+  background: rgba(0, 0, 0, 1.0);
+  color: var(--clh-yellow-light);
 
-  border: 3px solid var(--clh-blue);
+  border: 3px solid var(--clh-purple);
   outline: none;
   font-family: monospace;
   padding: 8px;

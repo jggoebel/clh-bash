@@ -68,17 +68,17 @@ const states = {
                 duration: 4000
             });
             // wait a short time so the CLH test pattern can be seen, then start drawing the console
-            await sleep(300);
             app.updateConsole = app.writeToConsole;
 
             sfx.boot.play();
 
             // let the camera zoom in for a while before moving on to displaying text on screen
             await sleep(1000);
+            
 
             app.cmd = "LOADING...";
             app.cmd += "\n\nTESTING ROUTINE\nINITIATED.";
-            app.cmd += "\n\nType PLAY";
+            app.cmd += "\n\nType PLAY to start";
 
             await camTween;
 
@@ -88,7 +88,8 @@ const states = {
 
             app.cmd += "\n> ";
 
-            await sleep(app.typingTime(app.cmd));
+            await sleep(app.typingTime(app.cmd) + 250);
+            app.allowTyping = true;
 
             app.onResult = async result => {
                 if (result.cmd.toLowerCase() === "play") {
@@ -114,7 +115,6 @@ const states = {
                 }
             };
 
-            app.allowTyping = true;
         }
     },
     [STATES.play]: {
@@ -163,6 +163,7 @@ const states = {
                 }
             });
 
+            app.charDelay = config.CHAR_APPEAR_DELAY_FAST
             app.cmd = `You have ${config.GAME_DURATION /
                 1000} seconds to enter ANY
 of the following:
@@ -183,12 +184,15 @@ Press Enter to continue.`;
                     ev.preventDefault();
                     ev.stopPropagation();
 
+                    
                     if (ev.keyCode === keyCodes.enter) {
+                        app.charDelay = config.CHAR_APPEAR_DELAY
                         app.onKeyPress = _.noop;
                         startPlaying();
                     }
                 };
 
+                app.charDelay = config.CHAR_APPEAR_DELAY_FAST
                 app.cmd = `\nThese commands are worth ${
                     config.SCORE_GOLDEN_COMMAND_MULTIPLIER
                 }x BONUS points:\n\n`;
@@ -350,7 +354,7 @@ Press Enter to continue.`;
     [STATES.score]: {
         enter: async function() {
             app.allowTyping = false;
-
+            app.charDelay = config.CHAR_APPEAR_DELAY_FAST
             controls.enabled = true;
 
             // Make sure fire is off
@@ -395,6 +399,7 @@ Press Enter to continue.`;
                 if (ev.keyCode === keyCodes.enter) {
                     app.onKeyPress = _.noop;
                     app.cmd = "";
+                    app.charDelay = config.CHAR_APPEAR_DELAY
 
                     if (leaders.isEmpty || app.score > leaders.lowestHiScore) {
                         app.toState(STATES.highscore);
@@ -482,6 +487,7 @@ Press Enter to continue.`;
         enter: async function() {
             app.allowTyping = false;
             app.showTitle = false;
+            app.charDelay = config.CHAR_APPEAR_DELAY_FAST
 
             controls.enabled = true;
 
@@ -522,8 +528,8 @@ Press Enter to continue.`;
                 // don't let any other event handlers run
                 ev.preventDefault();
                 ev.stopPropagation();
-
                 if (ev.keyCode === keyCodes.enter) {
+                    app.charDelay = config.CHAR_APPEAR_DELAY
                     app.onKeyPress = _.noop;
                     app.cmd = "";
                     app.toState(STATES.title);
@@ -566,13 +572,23 @@ async function init() {
     // init renderer
     renderer = new THREE.WebGLRenderer({
         canvas: document.querySelector("#game-canvas"),
-        antialias: true
+        antialias: config.RENDERER_ANTIALIASING_ENABLED,
+        powerPreference: config.RENDERER_POWER_PREFERENCE,
+        precision: config.RENDERER_PRECISION // Use lower precision; can be 'lowp', 'mediump', or 'highp'
     });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+
+    const scaleResolution = 0.9; // Render at 75% of the actual resolution
+    renderer.setSize(window.innerWidth * scaleResolution, window.innerHeight * scaleResolution);
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    //renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = config.RENDERER_SHADOWS_ENABLED;
+    renderer.shadowMap.type = THREE.BasicShadowMap;
     container.appendChild(renderer.domElement);
+
+    renderer.localClippingEnabled = true;
 
     // scene
 
@@ -602,71 +618,89 @@ async function init() {
 
     // lighting
 
-    let ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
+    if(config.RENDERER_AMBIENTLIGHT_ENABLED){
+        let ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+    }
+
 
     // spotlights
 
-    const SHADOW_MAP_WIDTH = 1024 * 2,
+    if(config.RENDERER_SPOTLIGHTS_ENABLED){
+        const SHADOW_MAP_WIDTH = 1024 * 2,
         SHADOW_MAP_HEIGHT = 1024 * 2;
-    const whiteSpot = new THREE.SpotLight(0xffffff, 1.0);
-    whiteSpot.position.set(-300, 600, 600);
-    whiteSpot.angle = Math.PI / 8;
-    whiteSpot.penumbra = 0.5;
-    whiteSpot.decay = 2;
-    whiteSpot.distance = 4000;
-    scene.add(whiteSpot);
+        const whiteSpot = new THREE.SpotLight(0xffffff, 1.0);
+        whiteSpot.position.set(-300, 600, 600);
+        whiteSpot.angle = Math.PI / 8;
+        whiteSpot.penumbra = 0.5;
+        whiteSpot.decay = 2;
+        whiteSpot.distance = 4000;
+        scene.add(whiteSpot);
 
-    const purpleSpot = new THREE.SpotLight(0xda8aff, 1.0);
-    purpleSpot.position.set(200, 200, 200);
-    purpleSpot.angle = Math.PI / 4;
-    purpleSpot.penumbra = 0.5;
-    purpleSpot.decay = 4;
-    purpleSpot.distance = 2000;
-    purpleSpot.castShadow = true;
-    purpleSpot.shadow.mapSize.width = SHADOW_MAP_WIDTH;
-    purpleSpot.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
-    purpleSpot.shadow.camera.near = 200;
-    purpleSpot.shadow.camera.far = 1000;
-    scene.add(purpleSpot);
+        const purpleSpot = new THREE.SpotLight(0xda8aff, 1.0);
+        purpleSpot.position.set(200, 200, 200);
+        purpleSpot.angle = Math.PI / 4;
+        purpleSpot.penumbra = 0.5;
+        purpleSpot.decay = 4;
+        purpleSpot.distance = 2000;
+        purpleSpot.castShadow = config.RENDERER_SPOTLIGHTS_SHADOWS_ENABLED;
+        purpleSpot.shadow.mapSize.width = SHADOW_MAP_WIDTH;
+        purpleSpot.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
+        purpleSpot.shadow.camera.near = 200;
+        purpleSpot.shadow.camera.far = 1000;
+        scene.add(purpleSpot);
+    }
+
 
     // models
 
     // load computer
+    if(config.RENDERER_COMPUTER_ENABLED){
+        const comp = await loadMesh(
+            "assets/models/",
+            "CLH_ep2_computer_high_poly.mtl",
+            "CLH_ep2_computer_high_poly.obj"
+        );
+        // make the screen reflect a crisp image
+        //comp.materials.materials.screen.roughness = 0.08;
+        comp.materials.materials.screen.roughness = 0.7;
+        comp.object.position.y = -300;
+        comp.object.position.x = 0;
+    
+        // enable shadows for each object in the set of computer meshes
+        comp.object.children.forEach(c => {
+            c.castShadow = config.RENDERER_COMPUTER_SHADOWS_ENABLED;
+            c.receiveShadow = config.RENDERER_COMPUTER_SHADOWS_ENABLED;
+        });
+    
+        comp.object.castShadow = config.RENDERER_COMPUTER_SHADOWS_ENABLED;
+        comp.object.receiveShadow = config.RENDERER_COMPUTER_SHADOWS_ENABLED;
 
-    const comp = await loadMesh(
-        "assets/models/",
-        "CLH_ep2_computer_high_poly.mtl",
-        "CLH_ep2_computer_high_poly.obj"
-    );
-    // make the screen reflect a crisp image
-    comp.materials.materials.screen.roughness = 0.08;
-    comp.materials.materials.screen.roughness = 0.7;
-    comp.object.position.y = -300;
-    comp.object.position.x = 0;
+        // set up a special canvas material for the screen
+    
+        const screen = _.find(comp.object.children, {
+            name: "IBM_5150_Monitor_-_glass"
+        });
+        screen.material = new THREE.MeshBasicMaterial();
+        screen.material.map = new THREE.CanvasTexture(consoleCanvas.canvas);
+        window.screen = screen;
+    
+        computer = comp.object;
+        window.comp = comp;
+        scene.add(comp.object);
+        camera.lookAt(comp.object.position);
 
-    // enable shadows for each object in the set of computer meshes
-    comp.object.children.forEach(c => {
-        c.castShadow = true;
-        c.receiveShadow = true;
-    });
+        // tweak the red and purple computer colors
+        comp.materials.materials.red.color.setHex(0x881111);
+        comp.materials.materials.red.clearcoat = 0.5
+        comp.materials.materials.red.clearcoatRoughness = 0.3;
 
-    comp.object.castShadow = true;
-    comp.object.receiveShadow = true;
-
-    // set up a special canvas material for the screen
-
-    const screen = _.find(comp.object.children, {
-        name: "IBM_5150_Monitor_-_glass"
-    });
-    screen.material = new THREE.MeshBasicMaterial();
-    screen.material.map = new THREE.CanvasTexture(consoleCanvas.canvas);
-    window.screen = screen;
-
-    computer = comp.object;
-    window.comp = comp;
-    scene.add(comp.object);
-    camera.lookAt(comp.object.position);
+        comp.materials.materials.purple.color.setHex(0x7d2cd0);
+        comp.materials.materials.purple.metalness = 0.4;
+        comp.materials.materials.purple.roughness = 0.5;
+        comp.materials.materials.purple.clearcoat = 0.5;
+        comp.materials.materials.purple.clearcoatRoughness = 0.3;
+    }
 
     // create a TEMPORARY flat plane to draw the console on.
 
@@ -703,59 +737,55 @@ async function init() {
 
     scene.add(consolePlane);
 
-    // Fire
-    firePlane = new THREE.PlaneBufferGeometry(
-        screenSize.width * 3.7,
-        screenSize.height * 3.7
-    );
-    fire = new THREE.Fire(firePlane, {
-        textureWidth: 512,
-        textureHeight: 512,
-        debug: false
-    });
-    let texture = new THREE.TextureLoader().load(
-        "assets/images/monitor_fire_inner.png"
-    );
-    texture.needsUpdate = true;
-    fire.clearSources();
-    fire.setSourceMap(texture);
-    fire.position.set(-5.5, 42.8, 25.5);
-    fire.rotation.x = -0.16;
-    setFireStage(config.FIRE_STAGE_ZERO);
-    scene.add(fire);
-    window.fire = fire;
+    
+    if(config.RENDERER_FIRE_ENABLED){
+        // Fire
+        firePlane = new THREE.PlaneBufferGeometry(
+            screenSize.width * 3.7,
+            screenSize.height * 3.7
+        );
+        fire = new THREE.Fire(firePlane, {
+            textureWidth: 512,
+            textureHeight: 512,
+            debug: false
+        });
+        let texture = new THREE.TextureLoader().load(
+            "assets/images/monitor_fire_inner.png"
+        );
+        texture.needsUpdate = true;
+        fire.clearSources();
+        fire.setSourceMap(texture);
+        fire.position.set(-5.5, 42.8, 25.5);
+        fire.rotation.x = -0.16;
+        setFireStage(config.FIRE_STAGE_ZERO);
+        scene.add(fire);
+        window.fire = fire;
+    }
 
     // load cyc wall
 
-    const cyc = await loadMesh(
-        "assets/models/",
-        "CLH_ep2_cyc_wall.mtl",
-        "CLH_ep2_cyc_wall.obj"
-    );
-    window.cyc = cyc.object;
-    cyc.object.position.y = 50;
-    cyc.object.children[0].castShadow = true;
-    cyc.object.children[0].receiveShadow = true;
-    cyc.materials.materials.purple.metalness = 0.4;
-    cyc.materials.materials.purple.roughness = 0.5;
-    cyc.materials.materials.purple.color.setHex(0x621b9c);
-    scene.add(cyc.object);
-
-    // tweak the red and purple computer colors
-    comp.materials.materials.red.color.setHex(0x881111);
-    comp.materials.materials.red.clearcoat = 0.5
-    comp.materials.materials.red.clearcoatRoughness = 0.3;
-
-    comp.materials.materials.purple.color.setHex(0x7d2cd0);
-    comp.materials.materials.purple.metalness = 0.4;
-    comp.materials.materials.purple.roughness = 0.5;
-    comp.materials.materials.purple.clearcoat = 0.5;
-    comp.materials.materials.purple.clearcoatRoughness = 0.3;
+    if(config.RENDERER_CYC_ENABLED){
+        const cyc = await loadMesh(
+            "assets/models/",
+            "CLH_ep2_cyc_wall.mtl",
+            "CLH_ep2_cyc_wall.obj"
+        );
+        window.cyc = cyc.object;
+        cyc.object.position.y = 50;
+        if(config.RENDERER_CYC_SHADOWS_ENABLED){
+            cyc.object.children[0].castShadow = true;
+            cyc.object.children[0].receiveShadow = true;
+        }
+        cyc.materials.materials.purple.metalness = 0.4;
+        cyc.materials.materials.purple.roughness = 0.5;
+        cyc.materials.materials.purple.color.setHex(0x621b9c);
+        scene.add(cyc.object);
+    }
 
     document.addEventListener("mousemove", onDocumentMouseMove, false);
-
     window.addEventListener("resize", onWindowResize, false);
     console.log("init complete");
+
 }
 
 function deriveTribe() {
@@ -815,6 +845,10 @@ function getFireScaleByStage(stage) {
 }
 
 function setFireStage(stage) {
+    if(!config.RENDERER_FIRE_ENABLED){
+        return;
+    }
+
     if (stage > config.FIRE_STAGE_THREE) stage = config.FIRE_STAGE_THREE;
     else if (stage < 0) stage = 0;
 

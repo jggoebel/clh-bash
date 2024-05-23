@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <!-- Global site tag (gtag.js) - Google Analytics -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-73203609-3"></script>
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'UA-73203609-3');
-        </script>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width">
         <title>BASH BOSS!</title>
@@ -17,18 +8,22 @@
     </head>
     <body>
         <canvas id="game-canvas"></canvas>
-        <!--<img id="test-pattern" src="assets/clh-thumb.png">-->
+        <img id="test-pattern" src="assets/clh-thumb.png">
         <div id="game">
             <div id="intro" v-bind:class="{ show: state == 'loading' }">
-                <img class="logo" src="./assets/clh-logo-white.svg">
+                <!--<img class="logo" src="./assets/clh-logo-white.svg">-->
+                > BASH<br>
+                > BOSS
                 <span>
                     <span v-if="isMobile">Apologies, mobile is not yet supported, but <a href="https://github.com/CommandLineHeroes/clh-bash">PRs are welcome</a>! </span>
-                    <span v-else>DOWNLOADING</span>
+                    <span v-else>LOADING</span>
                     <span v-if="!isMobile" class="cursor">█</span>
                 </span>
             </div>
             <div v-bind:class="{ show: showTitle }" id="title-screen">
-                <img v-bind:class="{ show: showTitle }" id="clh-logo" src="./assets/clh-logo-white.svg">
+                <!--<img v-bind:class="{ show: showTitle }" id="clh-logo" src="./assets/clh-logo-white.svg">-->
+                > BASH<br>
+                > BOSS
                 <p v-bind:class="{ show: showTitle }" id="instructions">
                     Test your command line skills.<br>
                     You have {{parseInt(gameDuration/1000)}} seconds to type commands from:
@@ -46,7 +41,7 @@
                     <a href="#credits" onclick="showCredits()">Credits</a> &middot; Forked from <a target="_blank" href="https://github.com/CommandLineHeroes/clh-bash">GitHub</a>
                 </p>
                 <p v-bind:class="{ show: showTitle }" id="credits">
-                    Created by <a href="https://clayto.com">Michael Clayton</a>, <a href="http://jaredsprague.com/">Jared Sprague</a>, and the <a href="https://www.redhat.com/en/command-line-heroes/">Command Line Heroes</a> team and community.<br><br>
+                    Originally created by <a href="https://clayto.com">Michael Clayton</a>, <a href="http://jaredsprague.com/">Jared Sprague</a>, and the <a href="https://www.redhat.com/en/command-line-heroes/">Command Line Heroes</a> team and community.<br><br>
                     Soundtrack: <a href="https://waveshaper1.bandcamp.com/track/66-mhz">"66 MHZ"</a> by <a href="https://waveshaper1.bandcamp.com/">Waveshaper</a>.<br><br>
 
                     Special thanks: Dan Courcy &middot; Eric Kramer &middot; Open-source contributors &middot; <a href="https://discord.gg/DYEGmFc">Command Line Heroes Discord</a> community<br><br>

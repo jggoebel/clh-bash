@@ -11,7 +11,8 @@ export default {
     SCORE_OVERALL_MULTIPLIER: 100,
     SCORE_GOLDEN_COMMAND_MULTIPLIER: 10,
     GAME_DURATION: 60000,
-    CHAR_APPEAR_DELAY: 60, // ms between characters appearing on screen
+    CHAR_APPEAR_DELAY: 20, // ms between characters appearing on screen
+    CHAR_APPEAR_DELAY_FAST: 1, // ms between characters appearing on screen
     MAX_LEADER_NAME_LENGTH: 20, // max length of names on leaderboard
 
     // General Fire settings
@@ -61,5 +62,18 @@ export default {
     FIRE_LOW_FPS_STAGE_THREE_SCALE: { x: 1.4, y: 1.3, z: 1 },
 
     MAX_FRAME_TIME: 1000 / 30, // 30 FPS
-    MAX_SLOW_FRAMES: 300
+    MAX_SLOW_FRAMES: 300,
+
+    RENDERER_POWER_PREFERENCE: "low-power",
+    RENDERER_PRECISION: "lowp", // Use lower precision; can be 'lowp', 'mediump', or 'highp'
+    RENDERER_SHADOWS_ENABLED: false,
+    RENDERER_ANTIALIASING_ENABLED: false,
+    RENDERER_FIRE_ENABLED: false,
+    RENDERER_AMBIENTLIGHT_ENABLED: true,
+    RENDERER_SPOTLIGHTS_ENABLED: true,
+    RENDERER_SPOTLIGHTS_SHADOWS_ENABLED: false,
+    RENDERER_COMPUTER_ENABLED: true,
+    RENDERER_COMPUTER_SHADOWS_ENABLED: false,
+    RENDERER_CYC_ENABLED: true,
+    RENDERER_CYC_SHADOWS_ENABLED: false
 };

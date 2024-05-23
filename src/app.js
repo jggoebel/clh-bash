@@ -67,6 +67,7 @@ const app = new Vue({
         timer: 0,
         allowTyping: false,
         score: 0,
+        charDelay: config.CHAR_APPEAR_DELAY,
         count: {
             js: 0,
             bash: 0,
@@ -346,12 +347,16 @@ const app = new Vue({
         },
         typingLoop: function() {
             let delay = this.typingTimeChar(
-                this.displayCmd[this.displayCmd - 1]
+                this.cmd[this.typingPosition], this.cmd[this.typingPosition] ?? ""
             );
 
             if (!this.allowTyping) {
                 this.displayCmd = this.cmd.substr(0, this.typingPosition);
+            }else{
+                this.typingPosition = this.cmd.length;
+                this.displayCmd = this.cmd;
             }
+
             // increment typing position but don't exceed the length of cmd
             this.typingPosition = Math.min(
                 this.typingPosition + 1,
@@ -361,20 +366,31 @@ const app = new Vue({
             setTimeout(this.typingLoop, delay);
         },
         // how long will it take to display the given character
-        typingTimeChar: function(str) {
-            let delay = config.CHAR_APPEAR_DELAY;
+        typingTimeChar: function(str, nextChar) {
 
-            if (/\s/.test(this.displayCmd[this.displayCmd.length - 1])) {
+            let delay = app.charDelay;
+
+            // Whitespace characters can be displayed faster
+            if (/\s/.test(str)) {
                 delay /= 10;
+
+                // set delay to 0 if next char is also a whitespace
+                if(/\s/.test(nextChar)){
+                    delay = 0;
+                }
             }
 
             return delay;
         },
         // how long will it take to display the given string
         typingTime: function(str) {
+            str = str.replace(/\s+/g, " ")
             return (
-                config.CHAR_APPEAR_DELAY * str.replace(/\S/g, "").length +
-                (config.CHAR_APPEAR_DELAY / 10) * str.replace(/\s/g, "").length
+                //Filter out non-whitespace Chars - array equals only whitespace characters, these can be typed faster
+                (app.charDelay / 10) * str.replace(/\S/g, "").length +
+
+                //Filter out whitespace Chars - array equals only non-whitespace characters, these can be typed in normal speed
+                (app.charDelay) * str.replace(/\s/g, "").length
             );
         },
         resetState: function() {
