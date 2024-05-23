@@ -58,6 +58,7 @@ const app = new Vue({
         showTitle: false,
         showScore: false,
         cmd: "",
+        languages: cmds.getLanguages(),
         typingPosition: 0,
         displayCmd: "",
         commands: [],
@@ -71,6 +72,7 @@ const app = new Vue({
             bash: 0,
             html: 0,
             py: 0,
+            kubernetes: 0,
             recentValidCharacters: 0,
             totalValidCharacters: 0,
             totalValidCommands: 0
@@ -216,6 +218,8 @@ const app = new Vue({
             let pyCommon = cmds.cmdsByLang.py.commonCmds;
             let htmlAll = filterCmds(cmds.cmdsByLang.html.cmds);
             let htmlCommon = filterCmds(cmds.cmdsByLang.html.commonCmds);
+            let kubernetesAll = filterCmds(cmds.cmdsByLang.kubernetes.cmds);
+            let kubernetesCommon = filterCmds(cmds.cmdsByLang.kubernetes.commonCmds);
 
             let cn = config.GOLDEN_CMDS_COMMON_PER_LANG;
             let rn = config.GOLDEN_CMDS_RANDOM_PER_LANG;
@@ -232,12 +236,16 @@ const app = new Vue({
                 ),
                 html: _.sampleSize(htmlCommon, cn).concat(
                     _.sampleSize(_.xor(htmlCommon, htmlAll), rn)
+                ),
+                kubernetes: _.sampleSize(kubernetesCommon, cn).concat(
+                    _.sampleSize(_.xor(kubernetesCommon, kubernetesAll), rn)
                 )
             };
             goldenCommands.all = goldenCommands.bash.concat(
                 goldenCommands.js,
                 goldenCommands.py,
-                goldenCommands.html
+                goldenCommands.html,
+                goldenCommands.kubernetes
             );
 
             return goldenCommands;
@@ -274,12 +282,12 @@ const app = new Vue({
                 .name.padEnd(
                     Math.floor(consoleCanvas.conf.PLAY_CHARS_PER_LINE / 2)
                 );
-            out += cmds.html().name + "\n";
+            out += cmds.kubernetes().name + "\n";
 
             // interleave commands of third and fourth langs
             out += _.zip(
                 goldCmds.py.map(c => ` - ${c}`.padEnd(halfScreen)),
-                goldCmds.html.map(c => `${` - ${c}`.padEnd(halfScreen)}\n`)
+                goldCmds.kubernetes.map(c => `${` - ${c}`.padEnd(halfScreen)}\n`)
             )
                 .map(cs => cs.join(""))
                 .join("");
@@ -378,6 +386,7 @@ const app = new Vue({
             this.count.bash = 0;
             this.count.html = 0;
             this.count.py = 0;
+            this.count.kubernetes = 0;
             this.count.recentValidCharacters = 0;
             this.count.totalValidCharacters = 0;
             this.count.totalValidCommands = 0;

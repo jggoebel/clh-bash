@@ -167,10 +167,12 @@ const states = {
                 1000} seconds to enter ANY
 of the following:
 
+- k8s Resources, keywords & buzzwords
 - bash shell commands & linux built-ins
 - JavaScript keywords, objects, functions
 - Python keywords, objects, functions
 - HTML5 tags
+
 
 Press Enter to continue.`;
 
@@ -376,6 +378,7 @@ Press Enter to continue.`;
             consoleCanvas.conf.FONT_SIZE = 4 * 90;
             app.cmd = "THANKS FOR PLAYING!\n\n";
             app.cmd += `SCORE       ${app.score}\n`;
+            app.cmd += `Kubernetes  ${app.count.kubernetes}\n`;
             app.cmd += `BASH        ${app.count.bash}\n`;
             app.cmd += `PYTHON      ${app.count.py}\n`;
             app.cmd += `JAVASCRIPT  ${app.count.js}\n`;
@@ -757,6 +760,7 @@ async function init() {
 
 function deriveTribe() {
     let cmdCounts = [
+        { tribe: "Kubernetes", count: app.count.kubernetes },
         { tribe: "bash", count: app.count.bash },
         { tribe: "Python", count: app.count.py },
         { tribe: "JavaScript", count: app.count.js },

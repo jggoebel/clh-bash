@@ -1,4 +1,5 @@
-# clh-bash
+# bash boss
+Forked from [Command Line Heroes Bash](https://github.com/CommandLineHeroes/clh-bash) and made into a 2D version
 
 ![screenshot from 2019-02-06 09-54-54](https://user-images.githubusercontent.com/3926730/52349830-53226480-29f5-11e9-82a9-783a04808e55.png)
 
