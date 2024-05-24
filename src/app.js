@@ -58,6 +58,7 @@ const app = new Vue({
         showTitle: false,
         showScore: false,
         cmd: "",
+        cmdDoneWritingFunc: _.noop,
         languages: cmds.getLanguages(),
         typingPosition: 0,
         displayCmd: "",
@@ -203,51 +204,51 @@ const app = new Vue({
                 );
 
                 // Filter out starting with underscore
-                filteredCmds = filteredCmds.filter(cmd => !cmd.startsWith("_"));
+                filteredCmds = filteredCmds.filter(cmd => !Array.isArray(cmd) && !cmd.startsWith("_"));
 
                 // Filter out ending with parens )
-                filteredCmds = filteredCmds.filter(cmd => !cmd.endsWith(")"));
+                filteredCmds = filteredCmds.filter(cmd => !Array.isArray(cmd) && !cmd.endsWith(")"));
 
                 return filteredCmds;
             };
 
-            let bashAll = filterCmds(cmds.cmdsByLang.bash.cmds);
-            let bashCommon = cmds.cmdsByLang.bash.commonCmds;
-            let jsAll = filterCmds(cmds.cmdsByLang.js.cmds);
-            let jsCommon = cmds.cmdsByLang.js.commonCmds;
-            let pyAll = filterCmds(cmds.cmdsByLang.py.cmds);
-            let pyCommon = cmds.cmdsByLang.py.commonCmds;
-            let htmlAll = filterCmds(cmds.cmdsByLang.html.cmds);
-            let htmlCommon = filterCmds(cmds.cmdsByLang.html.commonCmds);
-            let kubernetesAll = filterCmds(cmds.cmdsByLang.kubernetes.cmds);
-            let kubernetesCommon = filterCmds(cmds.cmdsByLang.kubernetes.commonCmds);
-
+            let goldenLanguages = [];
+            let languagesAvailable = cmds.getLanguageKeys();
+            let goldenLanguagesCount = 4;
+            let goldenCommands = {};
             let cn = config.GOLDEN_CMDS_COMMON_PER_LANG;
             let rn = config.GOLDEN_CMDS_RANDOM_PER_LANG;
 
-            let goldenCommands = {
-                bash: _.sampleSize(bashCommon, cn).concat(
-                    _.sampleSize(_.xor(bashCommon, bashAll), rn)
-                ),
-                js: _.sampleSize(jsCommon, cn).concat(
-                    _.sampleSize(_.xor(jsCommon, jsAll), rn)
-                ),
-                py: _.sampleSize(pyCommon, cn).concat(
-                    _.sampleSize(_.xor(pyCommon, pyAll), rn)
-                ),
-                html: _.sampleSize(htmlCommon, cn).concat(
-                    _.sampleSize(_.xor(htmlCommon, htmlAll), rn)
-                ),
-                kubernetes: _.sampleSize(kubernetesCommon, cn).concat(
-                    _.sampleSize(_.xor(kubernetesCommon, kubernetesAll), rn)
-                )
-            };
-            goldenCommands.all = goldenCommands.bash.concat(
-                goldenCommands.js,
-                goldenCommands.py,
-                goldenCommands.html,
-                goldenCommands.kubernetes
-            );
+            // Check if there are enough languages to choose from
+            if (languagesAvailable.length < goldenLanguagesCount) {
+                console.error("Not enough languages available to select 4 unique ones.");
+            } else {
+                // Shuffle the array of languages randomly
+                let shuffledLanguages = languagesAvailable.sort(() => 0.5 - Math.random());
+
+                // Select the first 4 languages from the shuffled array
+                goldenLanguages = shuffledLanguages.slice(0, goldenLanguagesCount);
+            }
+
+
+            console.log(goldenLanguages);
+
+            // Iterate over each golden language
+            goldenLanguages.forEach(lang => {
+                let allCmds = filterCmds(cmds.getLanguageById(lang).cmds);  // Retrieve all commands for the language
+                let commonCmds = cmds.getLanguageById(lang).commonCmds;  // Retrieve common commands for the language
+
+                // Sample commands using lodash
+                goldenCommands[lang] = _.sampleSize(commonCmds, cn).concat(
+                    _.sampleSize(_.xor(commonCmds, allCmds), rn)
+                );
+            });
+
+            // Combine all golden commands into one array
+            goldenCommands.all = [];
+            goldenLanguages.forEach(lang => {
+                goldenCommands.all = goldenCommands.all.concat(goldenCommands[lang]);
+            });
 
             return goldenCommands;
         },
@@ -261,37 +262,51 @@ const app = new Vue({
                 consoleCanvas.conf.PLAY_CHARS_PER_LINE / 2
             );
             const goldCmds = app.goldenCommands;
-            const langs = _.keys(goldCmds);
+            const langs = _.keys(goldCmds).filter((key) => key != "all");
 
-            // title of first and second langs
-            out += cmds.bash().name.padEnd(halfScreen);
-            out += cmds.js().name + "\n";
+            // Function to safely retrieve the first command or option
+            function getFirstCommand(cmd) {
+                if (Array.isArray(cmd)) {
+                    return cmd[0];  // Return the first option if it's an array
+                }
+                return cmd;  // Return the command if it's not an array
+            }
 
-            // interleave commands of first and second langs
-            out += _.zip(
-                goldCmds.bash.map(c => ` - ${c}`.padEnd(halfScreen)),
-                goldCmds.js.map(c => `${` - ${c}`.padEnd(halfScreen)}\n`)
-            )
-                .map(cs => cs.join(""))
-                .join("");
+            // Process each pair of languages
+            for (let i = 0; i < langs.length; i += 2) {
+                if (langs[i]) {  // Check if the first language in the pair exists
+                    // Display the name of the first language
+                    out += cmds.getLanguageById(langs[i]).name.padEnd(halfScreen);
+                }
+                if (langs[i + 1]) {  // Check if there is a second language in the pair
+                    // Display the name of the second language
+                    out += cmds.getLanguageById(langs[i+1]).name + "\n";
+                } else {
+                    // If there's no second language, ensure the line breaks correctly
+                    out += "\n";
+                }
 
-            out += "\n";
-
-            // title of third and fourth langs
-            out += cmds
-                .py()
-                .name.padEnd(
-                    Math.floor(consoleCanvas.conf.PLAY_CHARS_PER_LINE / 2)
+                // Get the longer of the two command lists to align the loop
+                const maxLength = Math.max(
+                    goldCmds[langs[i]] ? goldCmds[langs[i]].length : 0,
+                    goldCmds[langs[i + 1]] ? goldCmds[langs[i + 1]].length : 0
                 );
-            out += cmds.kubernetes().name + "\n";
 
-            // interleave commands of third and fourth langs
-            out += _.zip(
-                goldCmds.py.map(c => ` - ${c}`.padEnd(halfScreen)),
-                goldCmds.kubernetes.map(c => `${` - ${c}`.padEnd(halfScreen)}\n`)
-            )
-                .map(cs => cs.join(""))
-                .join("");
+                // Interleave commands of the two languages
+                for (let j = 0; j < maxLength; j++) {
+                    if (goldCmds[langs[i]] && goldCmds[langs[i]][j]) {
+                        out += ` - ${getFirstCommand(goldCmds[langs[i]][j])}`.padEnd(halfScreen);
+                    } else {
+                        out += " ".repeat(halfScreen);  // Fill space if there are no commands to display
+                    }
+                    if (goldCmds[langs[i + 1]] && goldCmds[langs[i + 1]][j]) {
+                        out += ` - ${getFirstCommand(goldCmds[langs[i + 1]][j])}\n`;
+                    } else if (j < maxLength) {
+                        out += "\n";  // Ensure line breaks align properly if there are no commands
+                    }
+                }
+                out += "\n";  // Extra line break after each pair
+            }
 
             return out;
         },
@@ -362,6 +377,11 @@ const app = new Vue({
                 this.typingPosition + 1,
                 this.cmd.length
             );
+
+            if(this.typingPosition == this.cmd.length){
+                app.cmdDoneWritingFunc();
+                app.cmdDoneWritingFunc = _.noop;
+            }
 
             setTimeout(this.typingLoop, delay);
         },

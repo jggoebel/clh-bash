@@ -75,8 +75,11 @@ const states = {
             // let the camera zoom in for a while before moving on to displaying text on screen
             await sleep(1000);
             
+            app.cmdDoneWritingFunc = async () => {
+                app.allowTyping = true;
+            }
 
-            app.cmd = "LOADING...";
+            app.cmd = "LOADING ARENA...";
             app.cmd += "\n\nTESTING ROUTINE\nINITIATED.";
             app.cmd += "\n\nType PLAY to start";
 
@@ -88,8 +91,8 @@ const states = {
 
             app.cmd += "\n> ";
 
-            await sleep(app.typingTime(app.cmd) + 250);
-            app.allowTyping = true;
+            //await sleep(app.typingTime(app.cmd));
+            
 
             app.onResult = async result => {
                 if (result.cmd.toLowerCase() === "play") {
@@ -111,7 +114,7 @@ const states = {
                     await sleep(200);
                     app.toState(STATES.leaderboard);
                 } else {
-                    app.cmd += "\nType PLAY\n";
+                    app.cmd += "\nType PLAY to start\n";
                 }
             };
 
@@ -136,7 +139,22 @@ const states = {
 
                 if (ev.keyCode === keyCodes.enter) {
                     app.onKeyPress = _.noop;
+                    app.charDelay = config.CHAR_APPEAR_DELAY
                     showGolden();
+                }
+
+                // on escape go back to title
+                if (ev.keyCode === keyCodes.escape) {
+                    app.onKeyPress = _.noop;
+                    app.charDelay = config.CHAR_APPEAR_DELAY
+                    app.toState(STATES.title);
+                }
+
+                // on space print all
+                if (ev.keyCode === keyCodes.space) {
+                    app.typingPosition = app.cmd.length;
+                    app.displayCmd = app.cmd;
+                    app.charDelay = config.CHAR_APPEAR_DELAY
                 }
             };
 
@@ -183,12 +201,26 @@ Press Enter to continue.`;
                     // don't let any other event handlers run
                     ev.preventDefault();
                     ev.stopPropagation();
-
                     
                     if (ev.keyCode === keyCodes.enter) {
                         app.charDelay = config.CHAR_APPEAR_DELAY
                         app.onKeyPress = _.noop;
                         startPlaying();
+                    }
+
+                        
+                    // on escape go back to title
+                    if (ev.keyCode === keyCodes.escape) {
+                        app.charDelay = config.CHAR_APPEAR_DELAY
+                        app.onKeyPress = _.noop;
+                        app.toState(STATES.title);
+                    }
+
+                        // on space print all
+                    if (ev.keyCode === keyCodes.space) {
+                        app.charDelay = config.CHAR_APPEAR_DELAY
+                        app.typingPosition = app.cmd.length;
+                        app.displayCmd = app.cmd;
                     }
                 };
 
@@ -220,17 +252,40 @@ Press Enter to continue.`;
                     _.constant("\n")
                 ).join("");
                 app.cmd = `${blankChars}TYPE!${blankLines}`;
-                app.onResult = async result => {
+                app.onResult = async (result) => {
+                    
+                    function getFirstCommand(cmd) {
+                        if (Array.isArray(cmd)) {
+                            return cmd[0];  // Return the first option if it's an array
+                        }
+                        return cmd;  // Return the command if it's not an array
+                    }
+
+                    let standardizedCmd = getFirstCommand(result.matchedCmd);
                     if (
                         result.valid &&
-                        !enteredValidCmds.includes(result.cmd)
+                        !enteredValidCmds.includes(standardizedCmd)
                     ) {
+                        
                         let cmdScore = config.SCORE_PER_COMMAND;
 
                         app.cmd += ` ✔  [${result.lang.join(" ")}]`;
 
+                        
+                        // See if the command entered matches any golden command
+                        let isGolden = false;
+                        let firstGoldenCmd;
+
+                        // Check each golden command to see if it matches the entered command
+                        app.goldenCommands.all.forEach(goldenCmd => {
+                            if (getFirstCommand(goldenCmd) === standardizedCmd) {
+                                isGolden = true;
+                                firstGoldenCmd = getFirstCommand(goldenCmd); // Get the first command if it's an array
+                            }
+                        });
+
                         // See if the command entered was a golden command
-                        if (app.goldenCommands.all.includes(result.cmd)) {
+                        if (isGolden) {
                             console.log("GOLDEN COMMAND ENTERED!");
                             sfx.cmdGold.play();
 
@@ -238,15 +293,16 @@ Press Enter to continue.`;
                             cmdScore *= config.SCORE_GOLDEN_COMMAND_MULTIPLIER;
                         } else {
                             sfx.cmdGood.play();
+                            // Keep log of entered valid commands
                         }
+
+                        enteredValidCmds.push(standardizedCmd);
 
                         // Increase score
                         app.score +=
                             (cmdScore + result.cmd.length) *
                             config.SCORE_OVERALL_MULTIPLIER;
 
-                        // Keep log of entered valid commands
-                        enteredValidCmds.push(result.cmd);
 
                         // Valid command increment counters
                         app.count.totalValidCommands++;
@@ -255,7 +311,7 @@ Press Enter to continue.`;
                     } else {
                         if (
                             result.valid &&
-                            enteredValidCmds.includes(result.cmd)
+                            enteredValidCmds.includes(standardizedCmd)
                         ) {
                             app.cmd += " x  [duplicate]";
                         } else {
@@ -306,40 +362,42 @@ Press Enter to continue.`;
                     }
                 }, 1000);
 
-                const fireInterval = setInterval(() => {
-                    // See if we need to turn up the FIRE!
-                    let cps =
-                        app.count.recentValidCharacters /
-                        (config.FIRE_CHECK_INTERVAL / 1000);
-                    console.log(
-                        "CPS:",
-                        cps,
-                        "Recent Valid:",
-                        app.count.recentValidCharacters
-                    );
-                    let stage;
+                if(config.RENDERER_FIRE_ENABLED){
+                    const fireInterval = setInterval(() => {
+                        // See if we need to turn up the FIRE!
+                        let cps =
+                            app.count.recentValidCharacters /
+                            (config.FIRE_CHECK_INTERVAL / 1000);
+                        console.log(
+                            "CPS:",
+                            cps,
+                            "Recent Valid:",
+                            app.count.recentValidCharacters
+                        );
+                        let stage;
 
-                    if (allowFire && cps >= config.FIRE_CPS_THRESHOLD) {
-                        stage = fire.userData.stage + 1;
-                        setFireStage(stage); // go up a stage
-                    } else if (cps < config.FIRE_CPS_THRESHOLD) {
-                        stage = fire.userData.stage - 1;
-                        setFireStage(stage); // go down a stage
-                    }
+                        
+                            if (allowFire && cps >= config.FIRE_CPS_THRESHOLD) {
+                                stage = fire.userData.stage + 1;
+                                setFireStage(stage); // go up a stage
+                            } else if (cps < config.FIRE_CPS_THRESHOLD) {
+                                stage = fire.userData.stage - 1;
+                                setFireStage(stage); // go down a stage
+                            }
 
-                    console.log("Set fire stage:", stage);
+                            console.log("Set fire stage:", stage);
+                    
 
-                    app.count.recentValidCharacters = 0;
+                        app.count.recentValidCharacters = 0;
 
-                    if (app.timer <= 0) {
-                        clearInterval(fireInterval);
-                        setFireStage(config.FIRE_STAGE_ZERO);
-                    }
-                }, config.FIRE_CHECK_INTERVAL);
+                        if (app.timer <= 0) {
+                            clearInterval(fireInterval);
+                            setFireStage(config.FIRE_STAGE_ZERO);
+                        }
+                    }, config.FIRE_CHECK_INTERVAL);
+                }
 
-                console.log("starting game timer");
                 await sleep(app.gameDuration);
-                console.log("game timer o'er");
 
                 sfx.play.fade(sfx.play.originalVolume, 0, 600);
 
@@ -436,6 +494,11 @@ Press Enter to continue.`;
                 });
             }
 
+            app.cmdDoneWritingFunc = async () => {
+                app.allowTyping = true;
+                app.cmd += "\n";
+            }
+
             if (app.score > leaders.topHiScore) {
                 app.cmd = "Top Score!\n";
                 console.log("New top score!", app.score);
@@ -448,8 +511,7 @@ Press Enter to continue.`;
 
             await sleep(app.typingTime(app.cmd));
 
-            app.allowTyping = true;
-            app.cmd += "\n";
+            
 
             app.onResult = async result => {
                 if (result.cmd.length > 0 && result.cmd !== ">") {
@@ -577,7 +639,7 @@ async function init() {
         precision: config.RENDERER_PRECISION // Use lower precision; can be 'lowp', 'mediump', or 'highp'
     });
 
-    const scaleResolution = 0.9; // Render at 75% of the actual resolution
+    const scaleResolution = 0.8; // Render at lower resolution
     renderer.setSize(window.innerWidth * scaleResolution, window.innerHeight * scaleResolution);
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
@@ -585,7 +647,7 @@ async function init() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     //renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = config.RENDERER_SHADOWS_ENABLED;
-    renderer.shadowMap.type = THREE.BasicShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     renderer.localClippingEnabled = true;
@@ -637,7 +699,7 @@ async function init() {
         whiteSpot.distance = 4000;
         scene.add(whiteSpot);
 
-        const purpleSpot = new THREE.SpotLight(0xda8aff, 1.0);
+        const purpleSpot = new THREE.SpotLight(0x75E4CE, 1.0);
         purpleSpot.position.set(200, 200, 200);
         purpleSpot.angle = Math.PI / 4;
         purpleSpot.penumbra = 0.5;
@@ -691,11 +753,11 @@ async function init() {
         camera.lookAt(comp.object.position);
 
         // tweak the red and purple computer colors
-        comp.materials.materials.red.color.setHex(0x881111);
+        comp.materials.materials.red.color.setHex(config.COLORS_COMPUTER_ACCENT);
         comp.materials.materials.red.clearcoat = 0.5
         comp.materials.materials.red.clearcoatRoughness = 0.3;
 
-        comp.materials.materials.purple.color.setHex(0x7d2cd0);
+        comp.materials.materials.purple.color.setHex(config.COLORS_COMPUTER);
         comp.materials.materials.purple.metalness = 0.4;
         comp.materials.materials.purple.roughness = 0.5;
         comp.materials.materials.purple.clearcoat = 0.5;
@@ -778,7 +840,7 @@ async function init() {
         }
         cyc.materials.materials.purple.metalness = 0.4;
         cyc.materials.materials.purple.roughness = 0.5;
-        cyc.materials.materials.purple.color.setHex(0x621b9c);
+        cyc.materials.materials.purple.color.setHex(config.COLORS_LIGHTS_CYC);
         scene.add(cyc.object);
     }
 

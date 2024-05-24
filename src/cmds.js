@@ -57,11 +57,21 @@ export function find(cmd) {
     const result = {
         lang: []
     };
+    cmd = cmd.trim(); // Trim the command once outside the loop
+
+    // Loop through each language's command list
     for (let lang in cmdsByLang) {
-        if (cmdsByLang[lang].cmds.includes(cmd.trim())) {
-            result.cmd = cmd;
-            result.lang.push(lang);
-        }
+        // Iterate over each command or command array in the command list
+        cmdsByLang[lang].cmds.forEach(command => {
+            // If command is an array, check if the trimmed command matches any command in the array
+            if (Array.isArray(command) && command.includes(cmd)) {
+                result.cmd = command[0]; // Set result.cmd to the first command in the array
+                result.lang.push(lang);
+            } else if (command === cmd) { // If it's not an array, check for direct equality
+                result.cmd = cmd; // Set result.cmd to the command itself
+                result.lang.push(lang);
+            }
+        });
     }
     return result;
 }
@@ -72,4 +82,12 @@ export function getLanguages() {
         languages.push(element.name);
     });
     return languages;
+}
+
+export function getLanguageKeys() {
+    return Object.keys(cmdsByLang);
+}
+
+export function getLanguageById(name) {
+    return cmdsByLang[name] ?? {};
 }

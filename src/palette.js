@@ -17,5 +17,6 @@ palette.orange = cssVar("--clh-orange");
 palette.orange_light = cssVar("--clh-orange-light");
 palette.blue = cssVar("--clh-blue");
 palette.blue_light = cssVar("--clh-blue-light");
+palette.console = cssVar("--clh-console");
 
 export default palette;

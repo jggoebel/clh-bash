@@ -29,18 +29,17 @@ body {
   --clh-orange-light: #f7a060;
   --clh-blue: #00a9e0;
   --clh-blue-light: #68cceb;
+  --clh-console: #66df48;
+  --clh-logo-color: #75E4CE;
 
   --title-reveal-interval: 600ms;
 }
 
 a {
-  color: var(--clh-blue);
+  color: var(--clh-logo-color);
 }
 a:active {
   color: var(--clh-white);
-}
-a:visited {
-  color: var(--clh-purple-light);
 }
 
 textarea#cmd {
@@ -159,7 +158,7 @@ textarea#cmd {
 #langs {
   text-align: center;
   font-size: 0.8em;
-  color: var(--clh-yellow-light);
+  color: var(--clh-logo-color);
   font-family: overpass-mono;
 }
 #langs .sep {

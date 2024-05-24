@@ -62,7 +62,7 @@ class ConsoleCanvas {
             this.canvas.width / this.conf.ASPECT,
             this.canvas.height
         );
-        this.ctx.fillStyle = palette.yellow_light;
+        this.ctx.fillStyle = palette.console;
 
         // fillText doesn't do multi-line, so split the text and call fill text
         // multiple times
@@ -91,7 +91,7 @@ class ConsoleCanvas {
                 this.conf.FONT_SIZE * 2
             );
             // this.ctx.fillRect(0, 0, 1000, 1000);
-            this.ctx.fillStyle = palette.yellow_light;
+            this.ctx.fillStyle = palette.console;
         }
 
         // draw score and time remaining
